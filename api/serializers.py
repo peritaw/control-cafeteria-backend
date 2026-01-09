@@ -51,3 +51,12 @@ class AsistenciaSerializer(serializers.ModelSerializer):
         model = Asistencia
         fields = '__all__'
         read_only_fields = ['horas_trabajadas', 'monto_total', 'fecha', 'hora_ingreso']
+
+class AsistenciaAdminSerializer(serializers.ModelSerializer):
+    empleado_nombre = serializers.CharField(source='empleado.user.username', read_only=True)
+    
+    class Meta:
+        model = Asistencia
+        fields = '__all__'
+        read_only_fields = ['horas_trabajadas', 'monto_total']  # Admin can edit times and dates
+

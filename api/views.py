@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Empleado, Cargo, Asistencia
-from .serializers import EmpleadoSerializer, CargoSerializer, AsistenciaSerializer
+from .serializers import EmpleadoSerializer, CargoSerializer, AsistenciaSerializer, AsistenciaAdminSerializer
 from datetime import datetime
 
 from rest_framework.authtoken.models import Token
@@ -32,8 +32,23 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
 
 class AsistenciaViewSet(viewsets.ModelViewSet):
     queryset = Asistencia.objects.all()
-    serializer_class = AsistenciaSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.user.is_staff:
+             return AsistenciaAdminSerializer
+        return AsistenciaSerializer
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.hora_ingreso and instance.hora_salida:
+             instance.calcular_pago()
+        else:
+             # Reset values if incomplete
+             instance.horas_trabajadas = None
+             instance.monto_total = None
+             instance.pagado = False # Reset paid status if invalidated? User didn't ask but makes sense.
+             instance.save()
 
     @action(detail=False, methods=['post'])
     def pagar_empleado(self, request):
