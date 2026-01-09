@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Empleado, Cargo, Asistencia
 from .serializers import EmpleadoSerializer, CargoSerializer, AsistenciaSerializer
 from datetime import datetime
@@ -11,6 +11,7 @@ from .auth_serializers import LoginSerializer
 from rest_framework.views import APIView
 
 class LoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -33,6 +34,17 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
     queryset = Asistencia.objects.all()
     serializer_class = AsistenciaSerializer
     permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['post'])
+    def pagar_empleado(self, request):
+        # Mark specific records as paid
+        ids = request.data.get('ids', [])
+        if not ids:
+             return Response({"error": "Falta lista de IDs (ids)"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Security: ensure we only update unpaid ones
+        count = Asistencia.objects.filter(id__in=ids, pagado=False).update(pagado=True)
+        return Response({"status": "ok", "actualizados": count})
 
     @action(detail=False, methods=['post'])
     def registrar_scan(self, request):

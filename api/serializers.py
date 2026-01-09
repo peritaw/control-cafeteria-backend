@@ -23,7 +23,7 @@ class EmpleadoSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Empleado
-        fields = ['id', 'user', 'cargo', 'cargo_nombre', 'username', 'password', 'first_name', 'last_name']
+        fields = ['id', 'user', 'cargo', 'cargo_nombre', 'username', 'password', 'first_name', 'last_name', 'frecuencia_pago']
 
     def create(self, validated_data):
         user_data = {
