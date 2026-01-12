@@ -1,4 +1,6 @@
 #!/bin/bash
+set -o errexit
+
 echo "Building the project..."
 pip install -r requirements.txt
 
