@@ -45,18 +45,24 @@ class EmpleadoSerializer(serializers.ModelSerializer):
         return instance
 
 class AsistenciaSerializer(serializers.ModelSerializer):
-    empleado_nombre = serializers.CharField(source='empleado.user.username', read_only=True)
+    empleado_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Asistencia
         fields = '__all__'
         read_only_fields = ['horas_trabajadas', 'monto_total', 'fecha', 'hora_ingreso']
 
+    def get_empleado_nombre(self, obj):
+        return obj.empleado.user.first_name or obj.empleado.user.username
+
 class AsistenciaAdminSerializer(serializers.ModelSerializer):
-    empleado_nombre = serializers.CharField(source='empleado.user.username', read_only=True)
+    empleado_nombre = serializers.SerializerMethodField()
     
     class Meta:
         model = Asistencia
         fields = '__all__'
         read_only_fields = ['horas_trabajadas', 'monto_total']  # Admin can edit times and dates
+
+    def get_empleado_nombre(self, obj):
+        return obj.empleado.user.first_name or obj.empleado.user.username
 
