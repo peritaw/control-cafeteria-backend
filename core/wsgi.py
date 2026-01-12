@@ -13,6 +13,11 @@ from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
-application = get_wsgi_application()
+import sys
+try:
+    application = get_wsgi_application()
+except Exception as e:
+    print(f"Error loading WSGI application: {e}", file=sys.stderr)
+    raise e
 
 app = application
