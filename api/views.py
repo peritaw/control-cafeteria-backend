@@ -10,6 +10,31 @@ from rest_framework.authtoken.models import Token
 from .auth_serializers import LoginSerializer
 from rest_framework.views import APIView
 
+from rest_framework.views import APIView
+from django.core.management import call_command
+import io
+
+class FixDBView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        log = io.StringIO()
+        try:
+            print("Running migrations...", file=log)
+            call_command('migrate', stdout=log, interactive=False)
+            
+            print("\nCreating superuser...", file=log)
+            from django.contrib.auth.models import User
+            if not User.objects.filter(username='admin').exists():
+                User.objects.create_superuser('admin', 'admin@admin.com', 'admin123')
+                print("Superuser 'admin' created.", file=log)
+            else:
+                print("Superuser 'admin' already exists.", file=log)
+
+            print("\nFix completed successfully!", file=log)
+            return Response({"status": "success", "log": log.getvalue()})
+        except Exception as e:
+            return Response({"status": "error", "error": str(e), "log": log.getvalue()}, status=500)
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
