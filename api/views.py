@@ -30,14 +30,51 @@ class EmpleadoViewSet(viewsets.ModelViewSet):
     serializer_class = EmpleadoSerializer
     permission_classes = [IsAuthenticated]
 
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.exceptions import ValidationError
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 1000
+
 class AsistenciaViewSet(viewsets.ModelViewSet):
-    queryset = Asistencia.objects.all()
+    # Default behavior: returns all if no specific filter, but now paginated
+    queryset = Asistencia.objects.all().order_by('-id')
     permission_classes = [IsAuthenticated]
+    pagination_class = StandardResultsSetPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filters
+        empleado_id = self.request.query_params.get('empleado')
+        fecha_start = self.request.query_params.get('fecha_start')
+        fecha_end = self.request.query_params.get('fecha_end')
+        pagado = self.request.query_params.get('pagado')
+        no_page = self.request.query_params.get('no_page')
+
+        if empleado_id:
+            queryset = queryset.filter(empleado_id=empleado_id)
+        if fecha_start:
+            queryset = queryset.filter(fecha__gte=fecha_start)
+        if fecha_end:
+            queryset = queryset.filter(fecha__lte=fecha_end)
+        if pagado is not None:
+            is_paid = pagado.lower() == 'true'
+            queryset = queryset.filter(pagado=is_paid)
+            
+        return queryset
 
     def get_serializer_class(self):
         if self.request.user.is_staff:
              return AsistenciaAdminSerializer
         return AsistenciaSerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        if instance.hora_ingreso and instance.hora_salida:
+             instance.calcular_pago()
 
     def perform_update(self, serializer):
         instance = serializer.save()
@@ -47,8 +84,13 @@ class AsistenciaViewSet(viewsets.ModelViewSet):
              # Reset values if incomplete
              instance.horas_trabajadas = None
              instance.monto_total = None
-             instance.pagado = False # Reset paid status if invalidated? User didn't ask but makes sense.
+             instance.pagado = False
              instance.save()
+
+    def perform_destroy(self, instance):
+        if instance.pagado:
+            raise ValidationError("No se puede eliminar un registro que ya ha sido liquidado/pagado.")
+        instance.delete()
 
     @action(detail=False, methods=['post'])
     def pagar_empleado(self, request):

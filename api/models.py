@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 class Cargo(models.Model):
     nombre = models.CharField(max_length=50)
@@ -24,7 +24,7 @@ class Empleado(models.Model):
 
 class Asistencia(models.Model):
     empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE)
-    fecha = models.DateField(auto_now_add=True)
+    fecha = models.DateField(default=date.today)
     hora_ingreso = models.TimeField(auto_now_add=True)
     hora_salida = models.TimeField(null=True, blank=True)
     horas_trabajadas = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -33,10 +33,13 @@ class Asistencia(models.Model):
 
     def calcular_pago(self):
         if self.hora_salida and self.hora_ingreso:
-            fmt = '%H:%M:%S'
-            d = date.today()
+            d = self.fecha
             dt_in = datetime.combine(d, self.hora_ingreso)
             dt_out = datetime.combine(d, self.hora_salida)
+            
+            # Si salió al día siguiente (ej. entró 22:00, salió 06:00)
+            if dt_out < dt_in:
+                dt_out += timedelta(days=1)
             
             diff = dt_out - dt_in
             hours = diff.total_seconds() / 3600
